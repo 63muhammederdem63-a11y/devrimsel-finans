@@ -1,18 +1,12 @@
 import streamlit as st
 import yfinance as yf
 import requests
-import time
 
 # Sayfa Yapılandırması
 st.set_page_config(page_title="Devrimsel Finans Platformu", layout="wide")
 
 st.title("Devrimsel Finans ve Analiz Platformu")
-st.subheader("Gemini AI ile Gerçek Zamanlı Yapay Zeka Analizi")
-
-# API Anahtarı Kontrolü
-api_key = st.secrets.get("GEMINI_API_KEY")
-if not api_key:
-    st.error("API Anahtarı yapılandırılamadı. Lütfen Streamlit Secrets ayarlarını kontrol edin.")
+st.subheader("Açık Kaynak Llama AI ile Gerçek Zamanlı Yapay Zeka Analizi")
 
 # Kullanıcı Girişi
 hisse_kodu = st.text_input("Analiz edilecek hisse kodunu girin (Örn: AAPL, TSLA, THYAO.IS):", "AAPL")
@@ -35,52 +29,44 @@ if st.button("Verileri Çek ve Analiz Et"):
                 
                 # Yapay Zeka Analizi
                 st.subheader("Yapay Zeka Analiz Raporu")
-                with st.spinner("Gemini Yapay Zeka analizi yapıyor..."):
+                with st.spinner("Yapay Zeka analizi yapıyor..."):
                     prompt = (
+                        f"<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n"
+                        f"Sen profesyonel bir finans analistisin. Verilen hisse verilerini analiz edip Türkçe yanıt veriyorsun.<|eot_id|>\n"
+                        f"<|start_header_id|>user<|end_header_id|>\n"
                         f"{hisse_kodu} kodlu hissenin son 1 aylık verilerine göre güncel fiyatı {guncel_fiyat:.2f} seviyesindedir. "
                         f"Bu hisse hakkında yatırımcılar için Türkçe, kısa, teknik ve temel bir özet analiz yap. "
-                        f"Destek/direnç durumlarını ve genel piyasa algısını yorumlayarak önerilerini listele."
+                        f"Destek/direnç durumlarını ve genel piyasa algısını yorumlayarak önerilerini listele.<|eot_id|>\n"
+                        f"<|start_header_id|>assistant<|end_header_id|>\n"
                     )
                     
-                    # 404 hatasını önlemek için stabil ve güncel olan gemini-2.0-flash modelini kullanıyoruz
-                    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
-                    
-                    headers = {
-                        "Content-Type": "application/json",
-                        "x-goog-api-key": api_key
-                    }
+                    # Hugging Face Ücretsiz Sunucusuz API Endpoint (Meta Llama 3)
+                    url = "https://api-inference.huggingface.co/models/meta-llama/Meta-Llama-3-8B-Instruct"
                     
                     payload = {
-                        "contents": [{
-                            "parts": [{"text": prompt}]
-                        }]
+                        "inputs": prompt,
+                        "parameters": {
+                            "max_new_tokens": 500,
+                            "temperature": 0.7,
+                            "return_full_text": False
+                        }
                     }
                     
-                    # Kota (429) durumlarına karşı 3 kez yeniden deneme mekanizması
-                    basarili = False
-                    for deneme in range(3):
-                        response = requests.post(f"{url}?key={api_key}", json=payload, headers=headers)
-                        
-                        if response.status_code == 200:
-                            data = response.json()
-                            ai_response = data['candidates'][0]['content']['parts'][0]['text']
+                    # Herhangi bir token sınırı olmadan çalışması için istek atıyoruz
+                    response = requests.post(url, json=payload)
+                    
+                    if response.status_code == 200:
+                        data = response.json()
+                        # Hugging Face yanıt formatına göre text'i çekiyoruz
+                        if isinstance(data, list) and len(data) > 0:
+                            ai_response = data[0].get('generated_text', 'Analiz üretilemedi.')
                             st.write(ai_response)
-                            basarili = True
-                            break
-                        elif response.status_code == 429:
-                            st.warning(f"Sunucu yoğun (Kota 429). {deneme + 1}. deneme başarısız. 5 saniye sonra otomatik tekrar deneniyor...")
-                            time.sleep(5)
-                        elif response.status_code == 404:
-                            st.error("Model Bulunamadı (404): Çağrılan model sürümü bu API anahtarı ile eşleşmiyor.")
-                            basarili = True
-                            break
                         else:
-                            st.error(f"Gemini API Hatası: {response.status_code} - {response.text}")
-                            basarili = True
-                            break
-                            
-                    if not basarili:
-                        st.error("İstek limitleri aşıldı. Lütfen biraz bekleyip sayfayı yenileyerek tekrar deneyin.")
+                            st.write(str(data))
+                    elif response.status_code == 503:
+                        st.warning("Model şu an sunucuda yükleniyor (Hugging Face uyanıyor). Lütfen 10 saniye sonra butona tekrar basın.")
+                    else:
+                        st.error(f"Yapay Zeka Hatası: {response.status_code} - {response.text}")
                         
             else:
                 st.error("Hisse verisi bulunamadı. Lütfen kodu doğru girdiğinizden emin olun.")
