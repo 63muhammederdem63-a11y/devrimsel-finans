@@ -1,48 +1,36 @@
 import streamlit as st
 import yfinance as yf
-import google.generativeai as genai
 
-st.set_page_config(page_title="ERMADEFİAN AI Analiz", layout="wide")
+st.set_page_config(page_title="ERMADEFİAN Yerel", layout="wide")
+st.title("ERMADEFİAN: API'siz Yerel Analiz Motoru")
 
-st.title("ERMADEFİAN: Profesyonel Finansal Analiz Sistemi")
-hisse_kodu = st.text_input("Analiz edilecek hisse:", "AAPL")
+hisse_kodu = st.text_input("Hisse kodu:", "AAPL")
 
-# Google Generative AI Yapılandırması
-try:
-    api_key = st.secrets["GEMINI_API_KEY"]
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-1.5-flash')
-except Exception as e:
-    st.error("API Anahtarı yapılandırma hatası. Lütfen Secrets ayarlarını kontrol edin.")
-
-if st.button("Detaylı Analiz Et"):
-    if not hisse_kodu:
-        st.warning("Lütfen bir hisse kodu girin.")
-    else:
-        try:
-            hisse = yf.Ticker(hisse_kodu)
-            hist = hisse.history(period="1mo")
+if st.button("Analiz Et"):
+    try:
+        hisse = yf.Ticker(hisse_kodu)
+        hist = hisse.history(period="3mo")
+        
+        if not hist.empty:
+            fiyatlar = hist['Close']
+            son_fiyat = fiyatlar.iloc[-1]
+            degisim = ((son_fiyat - fiyatlar.iloc[0]) / fiyatlar.iloc[0]) * 100
+            hareketli_ortalama = fiyatlar.rolling(window=20).mean().iloc[-1]
             
-            if not hist.empty:
-                son_fiyat = hist['Close'].iloc[-1]
-                st.success(f"Güncel Fiyat: ${son_fiyat:.2f}")
-                st.line_chart(hist['Close'])
-                
-                with st.spinner("YZ Derinlemesine Analiz Yapılıyor..."):
-                    prompt = f"""
-                    Hisse: {hisse_kodu}, Güncel Fiyat: {son_fiyat:.2f}.
-                    Son 1 aylık verileri teknik ve temel açıdan analiz et.
-                    1. Teknik trend yorumu.
-                    2. Piyasa algısı ve risk faktörleri.
-                    3. Yatırımcılar için 3 stratejik öneri.
-                    Analiz profesyonel, detaylı ve Türkçe olmalıdır.
-                    """
-                    
-                    # Resmi kütüphane ile analiz
-                    response = model.generate_content(prompt)
-                    st.subheader("🤖 Detaylı AI Raporu")
-                    st.write(response.text)
-            else:
-                st.error("Veri bulunamadı. Lütfen geçerli bir hisse kodu girin.")
-        except Exception as e:
-            st.error(f"Analiz sırasında bir hata oluştu: {str(e)}")
+            st.success(f"Güncel Fiyat: ${son_fiyat:.2f}")
+            st.line_chart(fiyatlar)
+            
+            # Tamamen kod tabanlı mantıksal analiz (API gerektirmez)
+            st.subheader("📊 Algoritmik Durum Raporu")
+            
+            durum = "Yükseliş Trendi" if son_fiyat > hareketli_ortalama else "Düşüş Trendi"
+            volatilite = "Yüksek" if (fiyatlar.std() / son_fiyat) > 0.02 else "Düşük"
+            
+            st.write(f"- **Trend Analizi:** Hisse şu an {hareketli_ortalama:.2f} olan 20 günlük ortalamanın üzerinde/altında olduğu için {durum} içerisindedir.")
+            st.write(f"- **Fiyat Değişimi:** Son 3 ayda %{degisim:.2f} değişim göstermiştir.")
+            st.write(f"- **Risk Seviyesi:** Fiyat oynaklığına göre volatilite durumu: {volatilite}.")
+            st.write("- **Özet:** Bu veriler tamamen teknik istatistiksel hesaplamalardır.")
+        else:
+            st.error("Hisse verisi bulunamadı.")
+    except Exception as e:
+        st.error(f"İşlem hatası: {e}")
