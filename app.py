@@ -1,48 +1,48 @@
 import streamlit as st
 import yfinance as yf
-import requests
+import google.generativeai as genai
 
 st.set_page_config(page_title="ERMADEFİAN AI Analiz", layout="wide")
 
 st.title("ERMADEFİAN: Profesyonel Finansal Analiz Sistemi")
 hisse_kodu = st.text_input("Analiz edilecek hisse:", "AAPL")
 
+# Google Generative AI Yapılandırması
+try:
+    api_key = st.secrets["GEMINI_API_KEY"]
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel('gemini-1.5-flash')
+except Exception as e:
+    st.error("API Anahtarı yapılandırma hatası. Lütfen Secrets ayarlarını kontrol edin.")
+
 if st.button("Detaylı Analiz Et"):
-    try:
-        hisse = yf.Ticker(hisse_kodu)
-        hist = hisse.history(period="1mo")
-        
-        if not hist.empty:
-            son_fiyat = hist['Close'].iloc[-1]
-            st.success(f"Güncel Fiyat: ${son_fiyat:.2f}")
-            st.line_chart(hist['Close'])
+    if not hisse_kodu:
+        st.warning("Lütfen bir hisse kodu girin.")
+    else:
+        try:
+            hisse = yf.Ticker(hisse_kodu)
+            hist = hisse.history(period="1mo")
             
-            with st.spinner("YZ Derinlemesine Analiz Yapılıyor..."):
-                # Gemini için optimize edilmiş sistem mesajı
-                prompt = f"""
-                Hisse: {hisse_kodu}, Güncel Fiyat: {son_fiyat:.2f}.
-                Lütfen bu veriyi kullanarak:
-                1. Teknik analiz (Trend, momentum).
-                2. Temel beklentiler ve piyasa algısı.
-                3. Yatırımcılar için 3 maddelik stratejik öneri listesi oluştur.
-                Analiz profesyonel, detaylı ve Türkçe olsun.
-                """
+            if not hist.empty:
+                son_fiyat = hist['Close'].iloc[-1]
+                st.success(f"Güncel Fiyat: ${son_fiyat:.2f}")
+                st.line_chart(hist['Close'])
                 
-                # Google AI Studio'dan aldığın anahtarı Streamlit Secrets'ta 'GEMINI_API_KEY' olarak tanımla
-                api_key = st.secrets["GEMINI_API_KEY"]
-                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
-                
-                payload = {"contents": [{"parts": [{"text": prompt}]}]}
-                
-                response = requests.post(url, json=payload)
-                
-                if response.status_code == 200:
-                    analiz = response.json()['candidates'][0]['content']['parts'][0]['text']
+                with st.spinner("YZ Derinlemesine Analiz Yapılıyor..."):
+                    prompt = f"""
+                    Hisse: {hisse_kodu}, Güncel Fiyat: {son_fiyat:.2f}.
+                    Son 1 aylık verileri teknik ve temel açıdan analiz et.
+                    1. Teknik trend yorumu.
+                    2. Piyasa algısı ve risk faktörleri.
+                    3. Yatırımcılar için 3 stratejik öneri.
+                    Analiz profesyonel, detaylı ve Türkçe olmalıdır.
+                    """
+                    
+                    # Resmi kütüphane ile analiz
+                    response = model.generate_content(prompt)
                     st.subheader("🤖 Detaylı AI Raporu")
-                    st.write(analiz)
-                else:
-                    st.error("API hatası oluştu, lütfen anahtarını kontrol et.")
-        else:
-            st.error("Veri bulunamadı.")
-    except Exception as e:
-        st.error(f"Sistem hatası: {e}")
+                    st.write(response.text)
+            else:
+                st.error("Veri bulunamadı. Lütfen geçerli bir hisse kodu girin.")
+        except Exception as e:
+            st.error(f"Analiz sırasında bir hata oluştu: {str(e)}")
