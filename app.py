@@ -41,8 +41,8 @@ if st.button("Verileri Çek ve Analiz Et"):
                         f"Destek/direnç durumlarını ve genel piyasa algısını yorumlayarak önerilerini listele."
                     )
                     
-                    # Google kütüphanesini bypass edip doğrudan HTTP API isteği atıyoruz
-                    url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={api_key}"
+                    # Google kütüphanesini bypass edip doğrudan v1beta API endpoint'ine bağlanıyoruz
+                    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
                     headers = {"Content-Type": "application/json"}
                     payload = {
                         "contents": [{
@@ -54,7 +54,6 @@ if st.button("Verileri Çek ve Analiz Et"):
                     
                     if response.status_code == 200:
                         data = response.json()
-                        # Gelen yanıttan metni güvenli bir şekilde ayıklıyoruz
                         ai_response = data['candidates'][0]['content']['parts'][0]['text']
                         st.write(ai_response)
                     else:
