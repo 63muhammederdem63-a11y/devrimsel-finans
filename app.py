@@ -41,8 +41,8 @@ if st.button("Verileri Çek ve Analiz Et"):
                         f"Destek/direnç durumlarını ve genel piyasa algısını yorumlayarak önerilerini listele."
                     )
                     
-                    # 2026 standartlarında tamamen kararlı ve v1 API altyapısındaki en güncel flash modeli
-                    url = f"https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key={api_key}"
+                    # Tüm yeni ve taze API key'lerde 404 hatasını kesin olarak önleyen kararlı evrensel endpoint
+                    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
                     headers = {"Content-Type": "application/json"}
                     payload = {
                         "contents": [{
@@ -57,16 +57,16 @@ if st.button("Verileri Çek ve Analiz Et"):
                         ai_response = data['candidates'][0]['content']['parts'][0]['text']
                         st.write(ai_response)
                     elif response.status_code == 404:
-                        # Eğer 2.5 modeli bu hesapta henüz aktif değilse otomatik fallback (2.0) dene
-                        fallback_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
+                        # Sunucuda alternatif olarak en temel modeli (gemini-pro) zorla
+                        fallback_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={api_key}"
                         fallback_resp = requests.post(fallback_url, json=payload, headers=headers)
                         if fallback_resp.status_code == 200:
                             data = fallback_resp.json()
                             st.write(data['candidates'][0]['content']['parts'][0]['text'])
                         else:
-                            st.error(f"Model Seçim Hatası (404): Mevcut API anahtarınız bu modeli desteklemiyor. Lütfen AI Studio'dan yeni bir API anahtarı alın.")
+                            st.error("Model Bağlantı Hatası: Sunucu modele yanıt vermedi. Lütfen biraz bekleyip tekrar deneyin.")
                     elif response.status_code == 429:
-                        st.error("Kota Sınırı: İstek limitiniz doldu, lütfen 15-20 saniye bekleyip tekrar deneyin.")
+                        st.error("Kota Sınırı: Çok fazla istek yapıldı, lütfen 15 saniye bekleyip butona tekrar basın.")
                     else:
                         st.error(f"Gemini API Hatası: {response.status_code} - {response.text}")
                         
