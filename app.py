@@ -41,8 +41,8 @@ if st.button("Verileri Çek ve Analiz Et"):
                         f"Destek/direnç durumlarını ve genel piyasa algısını yorumlayarak önerilerini listele."
                     )
                     
-                    # En kararlı ve evrensel çalışan güncel model sürümü
-                    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
+                    # Kotayı aşma ihtimaline karşı doğrudan temel modele (gemini-1.5-flash) v1beta üzerinden yönleniyoruz
+                    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
                     headers = {"Content-Type": "application/json"}
                     payload = {
                         "contents": [{
@@ -57,7 +57,7 @@ if st.button("Verileri Çek ve Analiz Et"):
                         ai_response = data['candidates'][0]['content']['parts'][0]['text']
                         st.write(ai_response)
                     elif response.status_code == 429:
-                        st.error("Gemini API Kotası Doldu! Lütfen 10-15 saniye bekleyip tekrar deneyin.")
+                        st.error("Mevcut API anahtarınızın Google tarafındaki günlük sınırı tamamen dolmuş. Lütfen 1. yoldaki gibi yeni bir API anahtarı ekleyin.")
                     else:
                         st.error(f"Gemini API Hatası: {response.status_code} - {response.text}")
                         
