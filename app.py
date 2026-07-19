@@ -41,8 +41,8 @@ if st.button("Verileri Çek ve Analiz Et"):
                         f"Destek/direnç durumlarını ve genel piyasa algısını yorumlayarak önerilerini listele."
                     )
                     
-                    # Kotayı aşma ihtimaline karşı doğrudan temel modele (gemini-1.5-flash) v1beta üzerinden yönleniyoruz
-                    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+                    # 2026 standartlarında tamamen kararlı ve v1 API altyapısındaki en güncel flash modeli
+                    url = f"https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key={api_key}"
                     headers = {"Content-Type": "application/json"}
                     payload = {
                         "contents": [{
@@ -56,8 +56,17 @@ if st.button("Verileri Çek ve Analiz Et"):
                         data = response.json()
                         ai_response = data['candidates'][0]['content']['parts'][0]['text']
                         st.write(ai_response)
+                    elif response.status_code == 404:
+                        # Eğer 2.5 modeli bu hesapta henüz aktif değilse otomatik fallback (2.0) dene
+                        fallback_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
+                        fallback_resp = requests.post(fallback_url, json=payload, headers=headers)
+                        if fallback_resp.status_code == 200:
+                            data = fallback_resp.json()
+                            st.write(data['candidates'][0]['content']['parts'][0]['text'])
+                        else:
+                            st.error(f"Model Seçim Hatası (404): Mevcut API anahtarınız bu modeli desteklemiyor. Lütfen AI Studio'dan yeni bir API anahtarı alın.")
                     elif response.status_code == 429:
-                        st.error("Mevcut API anahtarınızın Google tarafındaki günlük sınırı tamamen dolmuş. Lütfen 1. yoldaki gibi yeni bir API anahtarı ekleyin.")
+                        st.error("Kota Sınırı: İstek limitiniz doldu, lütfen 15-20 saniye bekleyip tekrar deneyin.")
                     else:
                         st.error(f"Gemini API Hatası: {response.status_code} - {response.text}")
                         
