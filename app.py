@@ -41,32 +41,40 @@ if st.button("Verileri Çek ve Analiz Et"):
                         f"Destek/direnç durumlarını ve genel piyasa algısını yorumlayarak önerilerini listele."
                     )
                     
-                    # Tüm yeni ve taze API key'lerde 404 hatasını kesin olarak önleyen kararlı evrensel endpoint
-                    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
-                    headers = {"Content-Type": "application/json"}
+                    # Google'ın yeni güvenlik ve doğrulama protokolüne uygun kararlı URL
+                    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
+                    
+                    # Kimlik doğrulama hatasını önlemek için API anahtarını hem başlığa hem URL'ye garantiye alıyoruz
+                    headers = {
+                        "Content-Type": "application/json",
+                        "x-goog-api-key": api_key
+                    }
+                    
                     payload = {
                         "contents": [{
                             "parts": [{"text": prompt}]
                         }]
                     }
                     
-                    response = requests.post(url, json=payload, headers=headers)
+                    # İstek parametresine de key ekleyerek çift yönlü garanti sağlıyoruz
+                    response = requests.post(f"{url}?key={api_key}", json=payload, headers=headers)
                     
                     if response.status_code == 200:
                         data = response.json()
                         ai_response = data['candidates'][0]['content']['parts'][0]['text']
                         st.write(ai_response)
                     elif response.status_code == 404:
-                        # Sunucuda alternatif olarak en temel modeli (gemini-pro) zorla
-                        fallback_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={api_key}"
-                        fallback_resp = requests.post(fallback_url, json=payload, headers=headers)
+                        # Ana modelde yetkilendirme hatası alınırsa 2.0 sürümünü aynı başlıklarla dene
+                        fallback_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
+                        fallback_resp = requests.post(f"{fallback_url}?key={api_key}", json=payload, headers=headers)
+                        
                         if fallback_resp.status_code == 200:
                             data = fallback_resp.json()
                             st.write(data['candidates'][0]['content']['parts'][0]['text'])
                         else:
-                            st.error("Model Bağlantı Hatası: Sunucu modele yanıt vermedi. Lütfen biraz bekleyip tekrar deneyin.")
+                            st.error(f"Bağlantı Hatası: Sunucu kimlik doğrulamasını geçemedi. (Kod: {fallback_resp.status_code})")
                     elif response.status_code == 429:
-                        st.error("Kota Sınırı: Çok fazla istek yapıldı, lütfen 15 saniye bekleyip butona tekrar basın.")
+                        st.error("Kota Sınırı: Çok fazla istek yapıldı, lütfen 15 saniye bekleyip tekrar deneyin.")
                     else:
                         st.error(f"Gemini API Hatası: {response.status_code} - {response.text}")
                         
