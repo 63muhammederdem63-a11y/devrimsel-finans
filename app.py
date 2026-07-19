@@ -11,7 +11,7 @@ st.subheader("Gemini AI ile Gerçek Zamanlı Yapay Zeka Analizi")
 # Gemini API Bağlantısı
 try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-  model = genai.GenerativeModel('models/gemini-1.5-flash')
+    model = genai.GenerativeModel('models/gemini-1.5-flash')
 except Exception as e:
     st.error("API Anahtarı yapılandırılamadı. Lütfen Streamlit Secrets ayarlarını kontrol edin.")
 
