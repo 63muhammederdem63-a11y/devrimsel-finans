@@ -11,6 +11,8 @@ st.subheader("Gemini AI ile Gerçek Zamanlı Yapay Zeka Analizi")
 # Gemini API Bağlantısı
 try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+    # Güncel SDK standartlarında model tanımlama
+    model = genai.GenerativeModel('gemini-1.5-flash')
 except Exception as e:
     st.error("API Anahtarı yapılandırılamadı. Lütfen Streamlit Secrets ayarlarını kontrol edin.")
 
@@ -41,12 +43,8 @@ if st.button("Verileri Çek ve Analiz Et"):
                         f"Bu hisse hakkında yatırımcılar için Türkçe, kısa, teknik ve temel bir özet analiz yap. "
                         f"Destek/direnç durumlarını ve genel piyasa algısını yorumlayarak önerilerini listele."
                     )
-                    
-                    # Hatayı önlemek için modeli doğrudan fonksiyon içinde çağırıyoruz
-                    response = genai.generate_content(
-                        model="gemini-1.5-flash",
-                        contents=prompt
-                    )
+                    # Doğru nesne üzerinden fonksiyon çağrısı
+                    response = model.generate_content(prompt)
                     st.write(response.text)
             else:
                 st.error("Hisse verisi bulunamadı. Lütfen kodu doğru girdiğinizden emin olun.")
