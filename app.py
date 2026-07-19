@@ -41,8 +41,8 @@ if st.button("Verileri Çek ve Analiz Et"):
                         f"Destek/direnç durumlarını ve genel piyasa algısını yorumlayarak önerilerini listele."
                     )
                     
-                    # 404 hatasını aşmak için v1 stable endpoint'i ve gemini-2.5-flash modelini kullanıyoruz
-                    url = f"https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key={api_key}"
+                    # Erişim kısıtlamasını aşmak için modeli gemini-2.5-pro olarak güncelledik
+                    url = f"https://generativelanguage.googleapis.com/v1/models/gemini-2.5-pro:generateContent?key={api_key}"
                     headers = {"Content-Type": "application/json"}
                     payload = {
                         "contents": [{
