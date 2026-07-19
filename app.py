@@ -1,6 +1,7 @@
 import streamlit as st
 import yfinance as yf
 import requests
+import time
 
 # Sayfa Yapılandırması
 st.set_page_config(page_title="Devrimsel Finans Platformu", layout="wide")
@@ -41,10 +42,9 @@ if st.button("Verileri Çek ve Analiz Et"):
                         f"Destek/direnç durumlarını ve genel piyasa algısını yorumlayarak önerilerini listele."
                     )
                     
-                    # Google'ın yeni güvenlik ve doğrulama protokolüne uygun kararlı URL
+                    # Google'ın en güncel ve kararlı 2.5-flash endpoint'i
                     url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
                     
-                    # Kimlik doğrulama hatasını önlemek için API anahtarını hem başlığa hem URL'ye garantiye alıyoruz
                     headers = {
                         "Content-Type": "application/json",
                         "x-goog-api-key": api_key
@@ -56,27 +56,28 @@ if st.button("Verileri Çek ve Analiz Et"):
                         }]
                     }
                     
-                    # İstek parametresine de key ekleyerek çift yönlü garanti sağlıyoruz
-                    response = requests.post(f"{url}?key={api_key}", json=payload, headers=headers)
-                    
-                    if response.status_code == 200:
-                        data = response.json()
-                        ai_response = data['candidates'][0]['content']['parts'][0]['text']
-                        st.write(ai_response)
-                    elif response.status_code == 404:
-                        # Ana modelde yetkilendirme hatası alınırsa 2.0 sürümünü aynı başlıklarla dene
-                        fallback_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
-                        fallback_resp = requests.post(f"{fallback_url}?key={api_key}", json=payload, headers=headers)
+                    # 429 Hatalarını aşmak için Döngüsel Yeniden Deneme Mekanizması (Max 3 Deneme)
+                    basarili = False
+                    for deneme in range(3):
+                        response = requests.post(f"{url}?key={api_key}", json=payload, headers=headers)
                         
-                        if fallback_resp.status_code == 200:
-                            data = fallback_resp.json()
-                            st.write(data['candidates'][0]['content']['parts'][0]['text'])
+                        if response.status_code == 200:
+                            data = response.json()
+                            ai_response = data['candidates'][0]['content']['parts'][0]['text']
+                            st.write(ai_response)
+                            basarili = True
+                            break
+                        elif response.status_code == 429:
+                            # 429 durumunda kullanıcıyı bilgilendir ve 5 saniye bekleyip tekrar dene
+                            st.warning(f"Sunucu yoğun (Kota 429). {deneme + 1}. deneme başarısız. 5 saniye sonra otomatik tekrar deneniyor...")
+                            time.sleep(5)
                         else:
-                            st.error(f"Bağlantı Hatası: Sunucu kimlik doğrulamasını geçemedi. (Kod: {fallback_resp.status_code})")
-                    elif response.status_code == 429:
-                        st.error("Kota Sınırı: Çok fazla istek yapıldı, lütfen 15 saniye bekleyip tekrar deneyin.")
-                    else:
-                        st.error(f"Gemini API Hatası: {response.status_code} - {response.text}")
+                            st.error(f"Gemini API Hatası: {response.status_code} - {response.text}")
+                            basarili = True
+                            break
+                            
+                    if not basarili:
+                        st.error("Ücretsiz API kotanız şu an tamamen dolu. Lütfen 30 saniye bekleyip sayfayı yenileyerek tekrar deneyin.")
                         
             else:
                 st.error("Hisse verisi bulunamadı. Lütfen kodu doğru girdiğinizden emin olun.")
