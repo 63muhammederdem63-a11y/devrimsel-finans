@@ -1,6 +1,6 @@
 import streamlit as st
 import yfinance as yf
-import google.generativeai as genai
+import requests
 
 # Sayfa Yapılandırması
 st.set_page_config(page_title="Devrimsel Finans Platformu", layout="wide")
@@ -8,12 +8,9 @@ st.set_page_config(page_title="Devrimsel Finans Platformu", layout="wide")
 st.title("Devrimsel Finans ve Analiz Platformu")
 st.subheader("Gemini AI ile Gerçek Zamanlı Yapay Zeka Analizi")
 
-# Gemini API Bağlantısı
-try:
-    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-    # En güncel kararlı model
-    model = genai.GenerativeModel('gemini-1.5-flash')
-except Exception as e:
+# API Anahtarı Kontrolü
+api_key = st.secrets.get("GEMINI_API_KEY")
+if not api_key:
     st.error("API Anahtarı yapılandırılamadı. Lütfen Streamlit Secrets ayarlarını kontrol edin.")
 
 # Kullanıcı Girişi
@@ -43,8 +40,26 @@ if st.button("Verileri Çek ve Analiz Et"):
                         f"Bu hisse hakkında yatırımcılar için Türkçe, kısa, teknik ve temel bir özet analiz yap. "
                         f"Destek/direnç durumlarını ve genel piyasa algısını yorumlayarak önerilerini listele."
                     )
-                    response = model.generate_content(prompt)
-                    st.write(response.text)
+                    
+                    # Google kütüphanesini bypass edip doğrudan HTTP API isteği atıyoruz
+                    url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={api_key}"
+                    headers = {"Content-Type": "application/json"}
+                    payload = {
+                        "contents": [{
+                            "parts": [{"text": prompt}]
+                        }]
+                    }
+                    
+                    response = requests.post(url, json=payload, headers=headers)
+                    
+                    if response.status_code == 200:
+                        data = response.json()
+                        # Gelen yanıttan metni güvenli bir şekilde ayıklıyoruz
+                        ai_response = data['candidates'][0]['content']['parts'][0]['text']
+                        st.write(ai_response)
+                    else:
+                        st.error(f"Gemini API Hatası: {response.status_code} - {response.text}")
+                        
             else:
                 st.error("Hisse verisi bulunamadı. Lütfen kodu doğru girdiğinizden emin olun.")
         except Exception as e:
