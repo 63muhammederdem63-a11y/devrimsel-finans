@@ -47,4 +47,4 @@ if st.button("Verileri Çek ve Analiz Et"):
             else:
                 st.error("Hisse verisi bulunamadı. Lütfen kodu doğru girdiğinizden emin olun.")
         except Exception as e:
-            st.error(f"Veri çekilirken bir hata oluştu: {e}")v
+            st.error(f"Veri çekilirken bir hata oluştu: {e}")
