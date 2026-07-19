@@ -1,39 +1,50 @@
-import streamlit as str
+import streamlit as st
 import yfinance as yf
-import requests
-import json
+import google.generativeai as genai
 
-str.title("Devrimsel Finans ve Analiz Platformu")
-str.write("Yerel Llama 3 ile Gerçek Zamanlı Yapay Zeka Analizi")
+# Sayfa Yapılandırması
+st.set_page_config(page_title="Devrimsel Finans Platformu", layout="wide")
 
-# Kullanıcıdan hisse senedi kodu alma
-hisse = str.text_input("Analiz edilecek hisse kodunu girin (Örn: AAPL, TSLA, THYAO.IS):", "AAPL")
+st.title("Devrimsel Finans ve Analiz Platformu")
+st.subheader("Gemini AI ile Gerçek Zamanlı Yapay Zeka Analizi")
 
-if str.button("Verileri Çek ve Analiz Et"):
-    # 1. Finansal Verileri Çekme
-    str.info(f"{hisse} için güncel veriler çekiliyor...")
-    data = yf.Ticker(hisse)
-    hist = data.history(period="7d")
-    
-    if not hist.empty:
-        kapanis = hist['Close'].iloc[-1]
-        str.success(f"Güncel Kapanış Fiyatı: ${kapanis:.2f}")
-        str.line_chart(hist['Close'])
-        
-        # 2. Yapay Zekaya Gönderilecek Soruyu Hazırlama
-        prompt = f"{hisse} kodlu hissenin son 7 günlük kapanış fiyatları sırasıyla şöyledir: {list(hist['Close'].round(2))}. Bu verilere göre teknik bir analiz yap ve kısa bir yatırım tavsiyesi içermeyen yorum üret."
-        
-        # 3. Yerel Llama 3'e İstek Atma
-        str.info("Yerel Llama 3 yapay zeka analizi yapıyor...")
-        url = "http://localhost:11434/api/generate"
-        payload = {"model": "llama3", "prompt": prompt, "stream": False}
+# Gemini API Bağlantısı
+try:
+    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+    model = genai.GenerativeModel('gemini-1.5-flash')
+except Exception as e:
+    st.error("API Anahtarı yapılandırılamadı. Lütfen Streamlit Secrets ayarlarını kontrol edin.")
+
+# Kullanıcı Girişi
+hisse_kodu = st.text_input("Analiz edilecek hisse kodunu girin (Örn: AAPL, TSLA, THYAO.IS):", "AAPL")
+
+if st.button("Verileri Çek ve Analiz Et"):
+    if hisse_kodu:
+        st.info(f"{hisse_kodu} için güncel veriler çekiliyor...")
         
         try:
-            response = requests.post(url, json=payload)
-            analiz = response.json().get("response", "Analiz alınamadı.")
-            str.subheader("Yapay Zeka Analiz Raporu")
-            str.write(analiz)
+            # yfinance ile veri çekme
+            hisse = yf.Ticker(hisse_kodu)
+            veri = hisse.history(period="1mo")
+            
+            if not veri.empty:
+                guncel_fiyat = veri['Close'].iloc[-1]
+                st.success(f"Güncel Kapanış Fiyatı: ${guncel_fiyat:.2f}")
+                
+                # Grafik Çizimi
+                st.line_chart(veri['Close'])
+                
+                # Yapay Zeka Analizi
+                st.subheader("Yapay Zeka Analiz Raporu")
+                with st.spinner("Gemini Yapay Zeka analizi yapıyor..."):
+                    prompt = (
+                        f"{hisse_kodu} kodlu hissenin son 1 aylık verilerine göre güncel fiyatı {guncel_fiyat:.2f} dolar/TL seviyesindedir. "
+                        f"Bu hisse hakkında yatırımcılar için Türkçe, kısa, teknik ve temel bir özet analiz yap. "
+                        f"Destek/direnç durumlarını ve genel piyasa algısını yorumlayarak önerilerini listele."
+                    )
+                    response = model.model.generate_content(prompt) if hasattr(model, 'model') else model.generate_content(prompt)
+                    st.write(response.text)
+            else:
+                st.error("Hisse verisi bulunamadı. Lütfen kodu doğru girdiğinizden emin olun.")
         except Exception as e:
-            str.error(f"Ollama bağlantı hatası: {e}. Arka planda Ollama uygulamasının açık olduğundan emin olun.")
-    else:
-        str.error("Hisse verisi bulunamadı. Kodu doğru girdiğinizden emin olun.")
+            st.error(f"Veri çekilirken bir hata oluştu: {e}")
