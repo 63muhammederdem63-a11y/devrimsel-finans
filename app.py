@@ -13,32 +13,42 @@ except:
     YFINANCE_AKTIF = False
 
 st.set_page_config(
-    page_title="ERMADEFİAN | Profesyonel Finans Terminali",
+    page_title="ERMADEFİAN | Kurumsal Finans Ekosistemi",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Kurumsal Tema (Bloomberg / TradingView koyu tema tarzı)
+# Kurumsal Tema (Bloomberg / TradingView koyu tema)
 st.markdown("""
     <style>
     .main {background-color: #0b0e14; color: #f0f6fc;}
     .stMetric {background-color: #161b22; padding: 15px; border-radius: 8px; border: 1px solid #30363d;}
     h1, h2, h3 {color: #58a6ff;}
+    .ticker-container {background-color: #161b22; padding: 10px; border-radius: 5px; border: 1px solid #30363d; margin-bottom: 20px; font-weight: bold; text-align: center;}
     </style>
     """, unsafe_allow_html=True)
 
+# --- ÜST CANLI PİYASA BANDI ---
+st.markdown("""
+<div class="ticker-container">
+    🟢 <b>ERMADEFİAN PİYASA AKIŞI:</b> USD/TRY: 32.50 | EUR/TRY: 35.20 | Gram Altın: 2,450 TL | BIST 100: 10,850 (+%1.8) | BTC/USD: 67,500$
+</div>
+""", unsafe_allow_html=True)
+
 st.sidebar.title("💎 ERMADEFİAN TERMINAL")
-st.sidebar.caption("Profesyonel Kurumsal Sürüm v7.0")
+st.sidebar.caption("Kurumsal Mega Sürüm v8.0")
 st.sidebar.markdown("---")
 
 modul = st.sidebar.radio("Modül Seçimi", [
     "📈 Profesyonel Canlı Borsa & Teknik Analiz",
     "🏦 Bankacılık & Mevduat Optimizasyonu",
-    "🛡️ Algoritmik Risk & Portföy"
+    "🛡️ Algoritmik Risk & Portföy",
+    "📊 Sektörel Isı Haritası & Bilanço",
+    "💼 Akıllı Portföy Varlık Dağılımı"
 ])
 
 st.sidebar.markdown("---")
-st.sidebar.info("Canlı Piyasa Veri Akışı Aktif")
+st.sidebar.info("Tüm Kurumsal Modüller Aktif")
 
 # --- 1. MODÜL: PROFESYONEL BORSA & TEKNİK ANALİZ ---
 if modul == "📈 Profesyonel Canlı Borsa & Teknik Analiz":
@@ -47,13 +57,11 @@ if modul == "📈 Profesyonel Canlı Borsa & Teknik Analiz":
     
     col_input1, col_input2, col_input3 = st.columns([2, 1, 1])
     
-    # Hazır popüler BIST / Global hisse kısayolları ve manuel giriş
     hisse_secim = col_input1.selectbox(
         "Hisse / Varlık Seçin veya Yazın:", 
         ["THYAO.IS", "EREGL.IS", "GARAN.IS", "AKBNK.IS", "BIMAS.IS", "KCHOL.IS", "AAPL", "TSLA", "BTC-USD"]
     )
-    hisse_kodu = col_input1.text_input("Veya Özel Kod Girin (Örn: SASA.IS):", hisse_secim).upper()
-    
+    hisse_kodu = col_input1.text_input("Veya Özel Kod Girin:", hisse_secim).upper()
     periyot = col_input2.selectbox("Zaman Dilimi", ["1mo", "3mo", "6mo", "1y", "ytd"], index=3)
     gosterge = col_input3.multiselect("Teknik İndikatörler", ["20 Günlük Basit Hareketli Ortalama (SMA)", "RSI (Göreceli Güç)"], default=["20 Günlük Basit Hareketli Ortalama (SMA)"])
     
@@ -73,47 +81,29 @@ if modul == "📈 Profesyonel Canlı Borsa & Teknik Analiz":
                     gunluk_dusuk = hist['Low'].min()
                     toplam_hacim = hist['Volume'].iloc[-1]
                     
-                    # Kurumsal Metrik Paneli
                     m1, m2, m3, m4 = st.columns(4)
                     m1.metric("Son Fiyat", f"{guncel_fiyat:,.2f}", f"%{degisim:.2f}")
-                    m2.metric("Dönem İçi En Yüksek", f"{gunluk_yuksek:,.2f}")
-                    m3.metric("Dönem İçi En Düşük", f"{gunluk_dusuk:,.2f}")
+                    m2.metric("Dönem En Yüksek", f"{gunluk_yuksek:,.2f}")
+                    m3.metric("Dönem En Düşük", f"{gunluk_dusuk:,.2f}")
                     m4.metric("İşlem Hacmi", f"{toplam_hacim:,.0f}")
                     
-                    # Profesyonel Subplot (Üstte Mum Grafik, Altta Hacim Grafiği)
-                    fig = make_subplots(rows=2, cols=1, shared_xaxes=True, 
-                                        vertical_spacing=0.03, row_heights=[0.8, 0.2])
+                    fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.03, row_heights=[0.8, 0.2])
                     
-                    # Mum Grafik (Candlestick)
                     fig.add_trace(go.Candlestick(
                         x=hist.index, open=hist['Open'], high=hist['High'],
                         low=hist['Low'], close=hist['Close'], name="Fiyat"
                     ), row=1, col=1)
                     
-                    # Teknik İndikatör: SMA Ekleme
                     if "20 Günlük Basit Hareketli Ortalama (SMA)" in gosterge:
                         hist['SMA20'] = hist['Close'].rolling(window=20).mean()
-                        fig.add_trace(go.Scatter(
-                            x=hist.index, y=hist['SMA20'], mode='lines',
-                            line=dict(color='orange', width=1.5), name="SMA 20"
-                        ), row=1, col=1)
+                        fig.add_trace(go.Scatter(x=hist.index, y=hist['SMA20'], mode='lines', line=dict(color='orange', width=1.5), name="SMA 20"), row=1, col=1)
                     
-                    # Hacim Barları (Volume Subplot)
                     colors = ['red' if row['Open'] - row['Close'] > 0 else 'green' for index, row in hist.iterrows()]
-                    fig.add_trace(go.Bar(
-                        x=hist.index, y=hist['Volume'], marker_color=colors, name="Hacim"
-                    ), row=2, col=1)
+                    fig.add_trace(go.Bar(x=hist.index, y=hist['Volume'], marker_color=colors, name="Hacim"), row=2, col=1)
                     
-                    fig.update_layout(
-                        title=f"{hisse_kodu} - Profesyonel Finansal Grafik & Hacim Analizi",
-                        template="plotly_dark",
-                        xaxis_rangeslider_visible=False,
-                        height=600,
-                        showlegend=True
-                    )
+                    fig.update_layout(title=f"{hisse_kodu} - Profesyonel Fiyat & Hacim Analizi", template="plotly_dark", xaxis_rangeslider_visible=False, height=550)
                     st.plotly_chart(fig, use_container_width=True)
                     
-                    # İkinci Grafik: RSI İndikatörü (Eğer seçildiyse)
                     if "RSI (Göreceli Güç)" in gosterge:
                         delta = hist['Close'].diff()
                         gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
@@ -123,9 +113,9 @@ if modul == "📈 Profesyonel Canlı Borsa & Teknik Analiz":
                         
                         fig_rsi = go.Figure()
                         fig_rsi.add_trace(go.Scatter(x=hist.index, y=hist['RSI'], line=dict(color='#00ffcc', width=1.5), name="RSI (14)"))
-                        fig_rsi.add_hline(y=70, line_dash="dash", line_color="red", annotation_text="Aşırı Alım (70)")
-                        fig_rsi.add_hline(y=30, line_dash="dash", line_color="green", annotation_text="Aşırı Satım (30)")
-                        fig_rsi.update_layout(title="RSI (Göreceli Güç Endeksi) Momentum Göstergesi", template="plotly_dark", height=250)
+                        fig_rsi.add_hline(y=70, line_dash="dash", line_color="red")
+                        fig_rsi.add_hline(y=30, line_dash="dash", line_color="green")
+                        fig_rsi.update_layout(title="RSI Momentum Göstergesi", template="plotly_dark", height=250)
                         st.plotly_chart(fig_rsi, use_container_width=True)
                         
                     veri_basarili = True
@@ -134,10 +124,6 @@ if modul == "📈 Profesyonel Canlı Borsa & Teknik Analiz":
 
     if not veri_basarili:
         st.info("Piyasa sunucularından veri alınamadı, yedek güvenli simülasyon modu devrede.")
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Tahmini Fiyat", "295.50 TL", "+%3.4")
-        c2.metric("Piyasa Durumu", "Stabil")
-        c3.metric("Mod", "Güvenli Yedek")
 
 # --- 2. MODÜL: BANKACILIK & MEVDUAT ---
 elif modul == "🏦 Bankacılık & Mevduat Optimizasyonu":
@@ -191,3 +177,56 @@ elif modul == "🛡️ Algoritmik Risk & Portföy":
             m1.metric("En İyi Senaryo Beklentisi (%95)", f"{np.percentile(son_degerler, 95):,.2f} TL")
             m2.metric("Medyan Beklenen Değer (%50)", f"{np.median(son_degerler):,.2f} TL")
             m3.metric("En Kötü Senaryo / Risk (%5)", f"{np.percentile(son_degerler, 5):,.2f} TL", delta_color="inverse")
+
+# --- 4. MODÜL: SEKTÖREL ISI HARİTASI & BİLANÇO ANALİZİ ---
+elif modul == "📊 Sektörel Isı Haritası & Bilanço":
+    st.title("📊 Borsa İstanbul Sektörel Isı Haritası & Temel Analiz")
+    st.write("Sektörlerin genel günlük performans matrisi ve temel finansal rasyolar.")
+    
+    # Örnek Sektörel Isı Haritası Verisi
+    data_heatmap = dict(
+        Sektor=["Bankacılık", "Holding", "Otomotiv", "Enerji", "Perakende", "Demir-Çelik", "İletişim", "Gayrimenkul"],
+        AltSektor=["Akbank/Garanti", "Koç/Sabancı", "Ford/Tofaş", "Tüpraş/Aksa", "Bim/Migros", "Ereğli/Kardemir", "Turkcell", "Emlak Konut"],
+        DegisimYuzde=[3.4, -1.2, 2.5, 4.1, 1.8, -2.3, 0.9, -0.5],
+        PiyasaDegeriMilyar=[450, 620, 310, 510, 280, 340, 220, 150]
+    )
+    df_hm = pd.DataFrame(data_heatmap)
+    
+    fig_hm = px.treemap(
+        df_hm, path=['Sektor', 'AltSektor'], values='PiyasaDegeriMilyar',
+        color='DegisimYuzde', color_continuous_scale='RdYlGn',
+        color_continuous_midpoint=0, title="BIST Sektörel Performans Matrisi (Isı Haritası)"
+    )
+    fig_hm.update_layout(template="plotly_dark", height=500)
+    st.plotly_chart(fig_hm, use_container_width=True)
+    
+    st.subheader("📋 Kurumsal Finansal Oranlar & Temel Veriler Tablosu")
+    st.dataframe(df_hm, use_container_width=True)
+
+# --- 5. MODÜL: AKILLI PORTFÖY VARLIK DAĞILIMI ---
+elif modul == "💼 Akıllı Portföy Varlık Dağılımı":
+    st.title("💼 Akıllı Portföy Varlık Dağılımı & Vade Takibi")
+    st.write("Yatırım sepetinizin enstrüman bazında dağılımını optimize edin.")
+    
+    c1, c2, c3, c4 = st.columns(4)
+    hisse_orani = c1.slider("Hisse Senetleri (%)", 0, 100, 50)
+    doviz_orani = c2.slider("Döviz & Altın (%)", 0, 100, 30)
+    mevduat_orani = c3.slider("Mevduat / Nakit (%)", 0, 100, 15)
+    kripto_orani = c4.slider("Kripto Varlıklar (%)", 0, 100, 5)
+    
+     toplam_oran = hisse_orani + doviz_orani + mevduat_orani + kripto_orani
+    
+    if toplam_oran != 100:
+        st.warning(f"⚠️ Varlık dağılım toplamı %100 olmalıdır! Şu anki toplam: %{toplam_oran}")
+    else:
+        st.success("✅ Portföy dağılım oranı dengede.")
+        
+        portfoy_data = {
+            "Varlık Sınıfı": ["Hisse Senetleri", "Döviz & Altın", "Mevduat / Nakit", "Kripto Varlıklar"],
+            "Oran": [hisse_orani, doviz_orani, mevduat_orani, kripto_orani]
+        }
+        df_portfoy = pd.DataFrame(portfoy_data)
+        
+        fig_pie = px.pie(df_portfoy, names="Varlık Sınıfı", values="Oran", title="Portföy Varlık Dağılım Grafiği", hole=0.4)
+        fig_pie.update_layout(template="plotly_dark", height=450)
+        st.plotly_chart(fig_pie, use_container_width=True)
