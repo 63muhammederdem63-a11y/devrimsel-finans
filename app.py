@@ -134,7 +134,7 @@ if df is not None and not df.empty:
     )
     st.plotly_chart(fig, use_container_width=True)
 else:
-    st.error(f"'{aktif_hisse'}' sembolü için veri alınamadı. Lütfen geçerli bir borsa kodu girdiğinizden emin olun (Örn: THYAO.IS, GARAN.IS, AAPL).")
+    st.error(f"'{aktif_hisse}' sembolü için veri alınamadı. Lütfen geçerli bir borsa kodu girdiğinizden emin olun (Örn: THYAO.IS, GARAN.IS, AAPL).")
 
 st.markdown("---")
 
