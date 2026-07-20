@@ -36,7 +36,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.sidebar.title("💎 ERMADEFİAN TERMINAL")
-st.sidebar.caption("Kurumsal Mega Sürüm v8.0")
+st.sidebar.caption("Kurumsal Mega Sürüm v8.1")
 st.sidebar.markdown("---")
 
 modul = st.sidebar.radio("Modül Seçimi", [
@@ -183,7 +183,6 @@ elif modul == "📊 Sektörel Isı Haritası & Bilanço":
     st.title("📊 Borsa İstanbul Sektörel Isı Haritası & Temel Analiz")
     st.write("Sektörlerin genel günlük performans matrisi ve temel finansal rasyolar.")
     
-    # Örnek Sektörel Isı Haritası Verisi
     data_heatmap = dict(
         Sektor=["Bankacılık", "Holding", "Otomotiv", "Enerji", "Perakende", "Demir-Çelik", "İletişim", "Gayrimenkul"],
         AltSektor=["Akbank/Garanti", "Koç/Sabancı", "Ford/Tofaş", "Tüpraş/Aksa", "Bim/Migros", "Ereğli/Kardemir", "Turkcell", "Emlak Konut"],
@@ -214,7 +213,7 @@ elif modul == "💼 Akıllı Portföy Varlık Dağılımı":
     mevduat_orani = c3.slider("Mevduat / Nakit (%)", 0, 100, 15)
     kripto_orani = c4.slider("Kripto Varlıklar (%)", 0, 100, 5)
     
-     toplam_oran = hisse_orani + doviz_orani + mevduat_orani + kripto_orani
+    toplam_oran = hisse_orani + doviz_orani + mevduat_orani + kripto_orani
     
     if toplam_oran != 100:
         st.warning(f"⚠️ Varlık dağılım toplamı %100 olmalıdır! Şu anki toplam: %{toplam_oran}")
