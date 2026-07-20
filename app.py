@@ -1,12 +1,3 @@
-devrimsel-finans/
-│
-├── requirements.txt
-├── app.py
-└── modules/
-    ├── __init__.py
-    ├── borsa.py
-    ├── banka_finans.py
-    └── risk_analiz.py
 import streamlit as st
 import datetime
 
@@ -58,11 +49,9 @@ if secim == "🏠 Ana Terminal & Piyasa Özetleri":
     st.info("Piyasalar küresel enflasyon verileri ve merkez bankası faiz kararları doğrultusunda hareket ediyor. Sol menüden detaylı analiz modüllerine geçiş yapabilirsiniz.")
 
 elif secim == "📈 Borsa & Hisse Analiz Merkezi":
-    # Bu kısmı detaylı borsa modülüne bağlayacağız
     st.title("📈 Profesyonel Borsa & Derinlemesine Hisse Analizi")
-    hisse = st.text_input("Borsa Hisse Kodu (Örn: THYAO.IS,EREGL.IS, AAPL):", "THYAO.IS").upper()
+    hisse = st.text_input("Borsa Hisse Kodu (Örn: THYAO.IS, EREGL.IS, AAPL):", "THYAO.IS").upper()
     st.write(f"Seçilen varlık ({hisse}) için profesyonel emir defteri, kademe analizi ve teknik indikatörler yükleniyor...")
-    # İleri düzey borsa modülü entegrasyonu buraya gelecek.
 
 elif secim == "🏦 Bankacılık, Faiz & Kredi Hesapları":
     st.title("🏦 Bankacılık ve Mevduat / Kredi Optimizasyon Merkezi")
