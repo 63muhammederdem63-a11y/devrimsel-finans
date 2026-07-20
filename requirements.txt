@@ -1,4 +1,7 @@
-google-generativeai
-yfinance
 streamlit
+yfinance
+pandas
+numpy
 plotly
+requests
+scipy
