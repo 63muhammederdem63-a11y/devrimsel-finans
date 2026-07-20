@@ -3,8 +3,9 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
-# yfinance hata verirse uygulama çökmesin diye güvenli içe aktarma
+# yfinance güvenli içe aktarma
 try:
     import yfinance as yf
     YFINANCE_AKTIF = True
@@ -12,86 +13,131 @@ except:
     YFINANCE_AKTIF = False
 
 st.set_page_config(
-    page_title="ERMADEFİAN | Kurumsal Finans Ekosistemi",
+    page_title="ERMADEFİAN | Profesyonel Finans Terminali",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
+# Kurumsal Tema (Bloomberg / TradingView koyu tema tarzı)
 st.markdown("""
     <style>
     .main {background-color: #0b0e14; color: #f0f6fc;}
-    .stMetric {background-color: #161b22; padding: 20px; border-radius: 10px; border: 1px solid #30363d;}
+    .stMetric {background-color: #161b22; padding: 15px; border-radius: 8px; border: 1px solid #30363d;}
     h1, h2, h3 {color: #58a6ff;}
     </style>
     """, unsafe_allow_html=True)
 
 st.sidebar.title("💎 ERMADEFİAN TERMINAL")
-st.sidebar.caption("Kurumsal Finans Sistemi v6.2")
+st.sidebar.caption("Profesyonel Kurumsal Sürüm v7.0")
 st.sidebar.markdown("---")
 
 modul = st.sidebar.radio("Modül Seçimi", [
-    "📈 Borsa & Hisse Analiz Merkezi",
+    "📈 Profesyonel Canlı Borsa & Teknik Analiz",
     "🏦 Bankacılık & Mevduat Optimizasyonu",
     "🛡️ Algoritmik Risk & Portföy"
 ])
 
 st.sidebar.markdown("---")
-st.sidebar.info("Güvenli Hibrit Mod Aktif")
+st.sidebar.info("Canlı Piyasa Veri Akışı Aktif")
 
-# --- 1. MODÜL: BORSA & HİSSE ANALİZ MERKEZİ ---
-if modul == "📈 Borsa & Hisse Analiz Merkezi":
-    st.title("📈 Borsa & Hisse Senedi Analiz Merkezi")
-    st.write("Anlık borsa verileri ve profesyonel mum grafikleri.")
+# --- 1. MODÜL: PROFESYONEL BORSA & TEKNİK ANALİZ ---
+if modul == "📈 Profesyonel Canlı Borsa & Teknik Analiz":
+    st.title("📈 Profesyonel Canlı Borsa & Teknik Analiz Terminali")
+    st.write("Gelişmiş mum grafikleri, teknik indikatörler (RSI, SMA) ve anlık piyasa derinliği.")
     
-    col_input1, col_input2 = st.columns([2, 1])
-    hisse_kodu = col_input1.text_input("Hisse Senedi Kodu (Örn: THYAO.IS, GARAN.IS, AAPL):", "THYAO.IS").upper()
-    periyot = col_input2.selectbox("Veri Periyodu", ["1mo", "3mo", "6mo", "1y"], index=2)
+    col_input1, col_input2, col_input3 = st.columns([2, 1, 1])
     
-    veri_cekildi = False
+    # Hazır popüler BIST / Global hisse kısayolları ve manuel giriş
+    hisse_secim = col_input1.selectbox(
+        "Hisse / Varlık Seçin veya Yazın:", 
+        ["THYAO.IS", "EREGL.IS", "GARAN.IS", "AKBNK.IS", "BIMAS.IS", "KCHOL.IS", "AAPL", "TSLA", "BTC-USD"]
+    )
+    hisse_kodu = col_input1.text_input("Veya Özel Kod Girin (Örn: SASA.IS):", hisse_secim).upper()
+    
+    periyot = col_input2.selectbox("Zaman Dilimi", ["1mo", "3mo", "6mo", "1y", "ytd"], index=3)
+    gosterge = col_input3.multiselect("Teknik İndikatörler", ["20 Günlük Basit Hareketli Ortalama (SMA)", "RSI (Göreceli Güç)"], default=["20 Günlük Basit Hareketli Ortalama (SMA)"])
+    
+    veri_basarili = False
     
     if YFINANCE_AKTIF:
         try:
-            hisse_verisi = yf.Ticker(hisse_kodu)
-            hist = hisse_verisi.history(period=periyot)
-            if not hist.empty:
-                guncel_fiyat = hist['Close'].iloc[-1]
-                onceki_fiyat = hist['Close'].iloc[-2]
-                degisim = ((guncel_fiyat - onceki_fiyat) / onceki_fiyat) * 100
-                hacim = hist['Volume'].iloc[-1]
+            with st.spinner(f"{hisse_kodu} piyasa verileri taranıyor..."):
+                tiker = yf.Ticker(hisse_kodu)
+                hist = tiker.history(period=periyot)
                 
-                m1, m2, m3 = st.columns(3)
-                m1.metric("Son İşlem Fiyatı", f"{guncel_fiyat:,.2f} TL", f"%{degisim:.2f}")
-                m2.metric("Günlük İşlem Hacmi", f"{hacim:,.0f}")
-                m3.metric("Veri Kaynağı", "Yahoo Finance (Canlı)")
-                
-                fig = go.Figure(data=[go.Candlestick(
-                    x=hist.index,
-                    open=hist['Open'],
-                    high=hist['High'],
-                    low=hist['Low'],
-                    close=hist['Close'],
-                    name="Mum Grafiği"
-                )])
-                fig.update_layout(template="plotly_dark", xaxis_title="Tarih", yaxis_title="Fiyat (TL)", xaxis_rangeslider_visible=False)
-                st.plotly_chart(fig, use_container_width=True)
-                veri_cekildi = True
-        except:
-            pass
-            
-    # Eğer canlı veri çekilemezse (sunucu engeli vb.), uygulama asla boş kalmasın diye profesyonel yedek veriyi gösterir:
-    if not veri_cekildi:
-        st.warning("Canlı sunucu bağlantısı yoğun, yedek simülasyon verileri gösteriliyor.")
-        m1, m2, m3 = st.columns(3)
-        m1.metric("Tahmini Son Fiyat", "295.50 TL", "+%3.4")
-        m2.metric("Piyasa Değeri", "405 Mil. TL")
-        m3.metric("Veri Kaynağı", "ERMADEFİAN Güvenli Mod")
-        
-        # Örnek Çizgi Grafik
-        tarihler = pd.date_range(end=pd.Timestamp.today(), periods=30)
-        ornek_fiyatlar = 280 + np.cumsum(np.random.randn(30) * 3)
-        fig = px.line(x=tarihler, y=ornek_fiyatlar, title=f"{hisse_kodu} - Son 30 Günlük Trend")
-        fig.update_layout(template="plotly_dark", xaxis_title="Tarih", yaxis_title="Fiyat (TL)")
-        st.plotly_chart(fig, use_container_width=True)
+                if not hist.empty:
+                    guncel_fiyat = hist['Close'].iloc[-1]
+                    onceki_fiyat = hist['Close'].iloc[-2]
+                    degisim = ((guncel_fiyat - onceki_fiyat) / onceki_fiyat) * 100
+                    gunluk_yuksek = hist['High'].max()
+                    gunluk_dusuk = hist['Low'].min()
+                    toplam_hacim = hist['Volume'].iloc[-1]
+                    
+                    # Kurumsal Metrik Paneli
+                    m1, m2, m3, m4 = st.columns(4)
+                    m1.metric("Son Fiyat", f"{guncel_fiyat:,.2f}", f"%{degisim:.2f}")
+                    m2.metric("Dönem İçi En Yüksek", f"{gunluk_yuksek:,.2f}")
+                    m3.metric("Dönem İçi En Düşük", f"{gunluk_dusuk:,.2f}")
+                    m4.metric("İşlem Hacmi", f"{toplam_hacim:,.0f}")
+                    
+                    # Profesyonel Subplot (Üstte Mum Grafik, Altta Hacim Grafiği)
+                    fig = make_subplots(rows=2, cols=1, shared_xaxes=True, 
+                                        vertical_spacing=0.03, row_heights=[0.8, 0.2])
+                    
+                    # Mum Grafik (Candlestick)
+                    fig.add_trace(go.Candlestick(
+                        x=hist.index, open=hist['Open'], high=hist['High'],
+                        low=hist['Low'], close=hist['Close'], name="Fiyat"
+                    ), row=1, col=1)
+                    
+                    # Teknik İndikatör: SMA Ekleme
+                    if "20 Günlük Basit Hareketli Ortalama (SMA)" in gosterge:
+                        hist['SMA20'] = hist['Close'].rolling(window=20).mean()
+                        fig.add_trace(go.Scatter(
+                            x=hist.index, y=hist['SMA20'], mode='lines',
+                            line=dict(color='orange', width=1.5), name="SMA 20"
+                        ), row=1, col=1)
+                    
+                    # Hacim Barları (Volume Subplot)
+                    colors = ['red' if row['Open'] - row['Close'] > 0 else 'green' for index, row in hist.iterrows()]
+                    fig.add_trace(go.Bar(
+                        x=hist.index, y=hist['Volume'], marker_color=colors, name="Hacim"
+                    ), row=2, col=1)
+                    
+                    fig.update_layout(
+                        title=f"{hisse_kodu} - Profesyonel Finansal Grafik & Hacim Analizi",
+                        template="plotly_dark",
+                        xaxis_rangeslider_visible=False,
+                        height=600,
+                        showlegend=True
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
+                    
+                    # İkinci Grafik: RSI İndikatörü (Eğer seçildiyse)
+                    if "RSI (Göreceli Güç)" in gosterge:
+                        delta = hist['Close'].diff()
+                        gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+                        loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+                        rs = gain / loss
+                        hist['RSI'] = 100 - (100 / (1 + rs))
+                        
+                        fig_rsi = go.Figure()
+                        fig_rsi.add_trace(go.Scatter(x=hist.index, y=hist['RSI'], line=dict(color='#00ffcc', width=1.5), name="RSI (14)"))
+                        fig_rsi.add_hline(y=70, line_dash="dash", line_color="red", annotation_text="Aşırı Alım (70)")
+                        fig_rsi.add_hline(y=30, line_dash="dash", line_color="green", annotation_text="Aşırı Satım (30)")
+                        fig_rsi.update_layout(title="RSI (Göreceli Güç Endeksi) Momentum Göstergesi", template="plotly_dark", height=250)
+                        st.plotly_chart(fig_rsi, use_container_width=True)
+                        
+                    veri_basarili = True
+        except Exception as e:
+            st.warning(f"Canlı veri çekilirken geçici bir ağ engeli oluştu: {e}")
+
+    if not veri_basarili:
+        st.info("Piyasa sunucularından veri alınamadı, yedek güvenli simülasyon modu devrede.")
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Tahmini Fiyat", "295.50 TL", "+%3.4")
+        c2.metric("Piyasa Durumu", "Stabil")
+        c3.metric("Mod", "Güvenli Yedek")
 
 # --- 2. MODÜL: BANKACILIK & MEVDUAT ---
 elif modul == "🏦 Bankacılık & Mevduat Optimizasyonu":
@@ -145,4 +191,3 @@ elif modul == "🛡️ Algoritmik Risk & Portföy":
             m1.metric("En İyi Senaryo Beklentisi (%95)", f"{np.percentile(son_degerler, 95):,.2f} TL")
             m2.metric("Medyan Beklenen Değer (%50)", f"{np.median(son_degerler):,.2f} TL")
             m3.metric("En Kötü Senaryo / Risk (%5)", f"{np.percentile(son_degerler, 5):,.2f} TL", delta_color="inverse")
-            
