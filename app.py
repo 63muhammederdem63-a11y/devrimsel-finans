@@ -6,238 +6,179 @@ import plotly.graph_objects as go
 import plotly.express as px
 from datetime import datetime
 
-# --- PLATFORM YAPILANDIRMASI ---
-st.set_page_config(page_title="ERMADEFİAN | Dijital Finans Ekosistemi", layout="wide", initial_sidebar_state="expanded")
+# --- 1. KURUMSAL SAYFA YAPILANDIRMASI ---
+st.set_page_config(
+    page_title="ERMADEFİAN | Profesyonel Finans Terminali",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
-# --- ÖZEL ARAYÜZ (CSS) STİLLERİ ---
+# --- 2. PROFESYONEL TERMINAL STİLLERİ (CSS) ---
 st.markdown("""
     <style>
-    .main {background-color: #f8f9fa;}
-    .stMetric {background-color: #ffffff; padding: 18px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-left: 5px solid #1f77b4;}
-    h1, h2, h3 {color: #1e293b;}
+    .main {background-color: #0e1117; color: #fafafa;}
+    .stMetric {background-color: #161b22; padding: 20px; border-radius: 8px; border: 1px solid #30363d;}
+    .stTextInput input {background-color: #161b22; color: white; border: 1px solid #30363d;}
+    h1, h2, h3 {color: #58a6ff;}
     </style>
     """, unsafe_allow_html=True)
 
-# --- MATEMATİKSEL VE FİNANSAL MOTOR ---
-class ErmaDefianCore:
-    @staticmethod
-    def teknik_hesapla(df):
+# --- 3. GÜÇLÜ VERİ VE HESAPLAMA MOTORU ---
+@st.cache_data(ttl=300)
+def veri_cek_ve_hesapla(ticker_kodu):
+    try:
+        df = yf.download(ticker_kodu, period="1y", interval="1d", progress=False)
+        if df.empty:
+            return None
+        
+        # Çok katmanlı başlık temizliği
         if isinstance(df.columns, pd.MultiIndex):
             df.columns = df.columns.droplevel(1)
+            
         close = df['Close'].squeeze()
         
+        # Teknik İndikatörler
         df['SMA20'] = close.rolling(20).mean()
         df['SMA50'] = close.rolling(50).mean()
         df['SMA200'] = close.rolling(200).mean()
         
+        # Bollinger Bantları
         std20 = close.rolling(20).std()
         df['BB_Up'] = df['SMA20'] + (std20 * 2)
         df['BB_Down'] = df['SMA20'] - (std20 * 2)
         
+        # RSI
         delta = close.diff()
         gain = (delta.where(delta > 0, 0)).rolling(14).mean()
         loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
-        df['RSI'] = 100 - (100 / (1 + (gain / loss)))
+        rs = gain / loss
+        df['RSI'] = 100 - (100 / (1 + rs))
+        
         return df
+    except Exception:
+        return None
 
-# --- YAN MENÜ (EKOSİSTEM NAVİGASYONU) ---
-st.sidebar.title("💎 ERMADEFİAN")
-st.sidebar.caption("Dijital Finans & Ekonomi Merkezi")
+# --- 4. SOL PANEL: KONTROL VE HİSSE SEÇİM MERKEZİ ---
+st.sidebar.title("⚡ ERMADEFİAN TERMINAL")
+st.sidebar.markdown("---")
 
-modur = st.sidebar.selectbox("Ekosistem Modülleri", [
-    "🏠 Ana Panel & Küresel Piyasalar",
-    "📈 Gelişmiş Hisse & Şirket Analizi",
-    "💱 Döviz & Emtia Merkezi",
-    "🧮 Finansal Hesaplama Araçları",
-    "🛡️ Sanal Portföy & Risk Yönetimi",
-    "🧪 Finans Laboratuvarı & Simülasyon",
-    "💰 Kişisel Bütçe & Gider Yönetimi"
-])
-
-# ==========================================
-# 1. ANA PANEL & KÜRESEL PİYASALAR
-# ==========================================
-if modur == "🏠 Ana Panel & Küresel Piyasalar":
-    st.title("🌟 ErmaDefian'a Hoş Geldiniz")
-    st.write("Yapay zekâ destekli yeni nesil finans ve ekonomik analiz platformundasınız.")
-    
-    st.subheader("🌐 Canlı Küresel Endeksler & Varlıklar")
-    global_assets = {
-        "BIST 100": "^XU100.IS", "S&P 500": "^GSPC", "Nasdaq": "^IXIC",
-        "Dolar/TL": "USDTRY=X", "Euro/TL": "EURTRY=X", "Altın (Ons)": "GC=F", "Bitcoin": "BTC-USD"
-    }
-    
-    cols = st.columns(4)
-    i = 0
-    for name, ticker in global_assets.items():
-        try:
-            data = yf.Ticker(ticker).history(period="2d")
-            fiyat = float(data['Close'].iloc[-1])
-            degisim = ((fiyat - float(data['Close'].iloc[-2])) / float(data['Close'].iloc[-2])) * 100
-            cols[i % 4].metric(name, f"{fiyat:,.2f}", f"{degisim:+.2f}%")
-        except:
-            cols[i % 4].metric(name, "Veri Yok", "0.00%")
-        i += 1
-
-# ==========================================
-# 2. GELİŞMİŞ HİSSE & ŞİRKET ANALİZİ
-# ==========================================
-elif modur == "📈 Gelişmiş Hisse & Şirket Analizi":
-    st.title("📈 Profesyonel Hisse Senedi & Şirket Analitiği")
-    ticker = st.text_input("Hisse / Varlık Kodu (Örn: THYAO.IS, AAPL, TSLA):", "THYAO.IS").upper()
-    
-    if st.button("Kapsamlı Analiz Başlat"):
-        try:
-            hisse = yf.Ticker(ticker)
-            df = hisse.history(period="1y")
-            if df.empty:
-                st.error("Geçerli bir veri bulunamadı.")
-            else:
-                df = ErmaDefianCore.teknik_hesapla(df)
-                info = hisse.info
-                
-                c1, c2, c3, c4 = st.columns(4)
-                c1.metric("Son Fiyat", f"{float(df['Close'].iloc[-1]):.2f}")
-                c2.metric("Piyasa Değeri", f"{info.get('marketCap', 0)/1000000000:,.2f} Mr")
-                c3.metric("F/K Oranı", f"{info.get('trailingPE', 'N/A')}")
-                c4.metric("RSI (14)", f"{float(df['RSI'].iloc[-1]):.2f}")
-                
-                # Mum Grafiği
-                fig = go.Figure()
-                fig.add_trace(go.Candlestick(
-                    x=df.index, open=df['Open'].squeeze(), high=df['High'].squeeze(),
-                    low=df['Low'].squeeze(), close=df['Close'].squeeze(), name='Fiyat'
-                ))
-                fig.add_trace(go.Scatter(x=df.index, y=df['SMA50'].squeeze(), name='SMA 50', line=dict(color='orange')))
-                st.plotly_chart(fig, use_container_width=True)
-                
-                st.subheader("📋 Şirket Temel Verileri")
-                st.json({
-                    "Şirket Adı": info.get('longName', 'Bilinmiyor'),
-                    "Sektör": info.get('sector', 'Bilinmiyor'),
-                    "Ülke": info.get('country', 'Bilinmiyor'),
-                    "52 Hafta Yüksek": info.get('fiftyTwoWeekHigh', 'N/A'),
-                    "52 Hafta Düşük": info.get('fiftyTwoWeekLow', 'N/A')
-                })
-        except Exception as e:
-            st.error(f"Analiz sırasında hata oluştu: {e}")
-
-# ==========================================
-# 3. DÖVİZ & EMTİA MERKEZİ
-# ==========================================
-elif modur == "💱 Döviz & Emtia Merkezi":
-    st.title("💱 Küresel Döviz ve Kıymetli Madenler Merkezi")
-    col1, col2 = st.columns(2)
-    with col1:
-         miktar = st.number_input("Çevrilecek Tutar:", min_value=1.0, value=1000.0)
-         kaynak = st.selectbox("Kaynak Para Birimi", ["USD", "EUR", "TRY", "GBP", "CHF"])
-    with col2:
-        hedef = st.selectbox("Hedef Para Birimi", ["TRY", "USD", "EUR", "GBP", "JPY"])
-    
-    if st.button("Dönüştür ve Hesapla"):
-        pair = f"{kaynak}{hedef}=X"
-        try:
-            if kaynak == hedef:
-                sonuc = miktar
-            else:
-                data = yf.Ticker(pair).history(period="1d")
-                kur = float(data['Close'].iloc[-1])
-                sonuc = miktar * kur
-            st.success(f"{miktar:,.2f} {kaynak} = **{sonuc:,.2f} {target if 'target' in locals() else hedef}**")
-        except:
-            st.info("Çapraz kur anlık hesaplandı veya serbest piyasa verisi baz alındı.")
-
-# ==========================================
-# 4. FİNANSAL HESAPLAMA ARAÇLARI
-# ==========================================
-elif modur == "🧮 Finansal Hesaplama Araçları":
-    st.title("🧮 Gelişmiş Finansal Hesaplama Araçları")
-    hesap_turu = st.selectbox("Hesaplama Modeli", ["Bileşik Faiz & Yatırım", "Kredi & Taksit Analizi", "Enflasyon Satın Alma Gücü"])
-    
-    if hesap_turu == "Bileşik Faiz & Yatırım":
-        anapara = st.number_input("Başlangıç Anapara (TL):", 10000)
-        faiz = st.slider("Yıllık Beklenen Getiri / Faiz Oranı (%)", 1.0, 100.0, 24.0)
-        yil = st.slider("Vade (Yıl)", 1, 30, 5)
-        
-        gelecek_deger = anapara * ((1 + (faiz / 100)) ** yil)
-        st.metric("Vade Sonu Toplam Tutar", f"{gelecek_deger:,.2f} TL", f"+{gelecek_deger - anapara:,.2f} TL Net Kazanç")
-        
-    elif hesap_turu == "Kredi & Taksit Analizi":
-        kredi = st.number_input("Kredi Tutarı (TL):", 100000)
-        faiz_orani = st.number_input("Aylık Faiz Oranı (%):", 3.0)
-        vade_ay = st.slider("Vade (Ay)", 1, 120, 36)
-        
-        # Basit taksit formülü
-        oran = faiz_orani / 100
-        taksit = (kredi * oran * ((1 + oran)**vade_ay)) / (((1 + oran)**vade_ay) - 1)
-        st.metric("Tahmini Aylık Taksit", f"{taksit:,.2f} TL")
-        st.write(f"Toplam Geri Ödeme: **{(taksit * vade_ay):,.2f} TL**")
-
-# ==========================================
-# 5. SANAL PORTFÖY & RİSK YÖNETİMİ
-# ==========================================
-elif modur == "🛡️ Sanal Portföy & Risk Yönetimi":
-    st.title("🛡️ Sanal Varlık & Portföy Yönetim Paneli")
-    st.write("Portföyünüzün varlık dağılımını simüle edin.")
-    
-    col1, col2, col3 = st.columns(3)
-    hisse_payi = col1.slider("Hisse Senetleri (%)", 0, 100, 50)
-    altin_payi = col2.slider("Altın / Emtia (%)", 0, 100, 30)
-    nakit_payi = col3.slider("Nakit / Tahvil (%)", 0, 100, 20)
-    
-    if hisse_payi + altin_payi + nakit_payi != 100:
-        st.warning("⚠️ Varlık dağılım oranları toplamı tam olarak %100 olmalıdır!")
-    else:
-        st.success("Portföy ağırlık dağılımı onaylandı.")
-        # Pasta grafik
-        fig = px.pie(names=['Hisse Senetleri', 'Altın / Emtia', 'Nakit / Tahvil'], values=[hisse_payi, altin_payi, nakit_payi], title="Portföy Varlık Dağılımı")
-        st.plotly_chart(fig, use_container_width=True)
-
-# ==========================================
-# 6. FİNANS LABORATUVARI & SİMÜLASYON
-# ==========================================
-elif modur == "🧪 Finans Laboratuvarı & Simülasyon":
-    st.title("🧪 Finans Laboratuvarı: Monte Carlo Risk Analizi")
-    st.write("Gelecekteki olası portföy volatilite simülasyonunu test edin.")
-    
-    baslangic_fiyat = st.number_input("Başlangıç Portföy Değeri", 100000)
-    gun_sayisi = st.slider("Simülasyon Süresi (İşlem Günü)", 30, 252, 100)
-    
-    if st.button("Simülasyonu Çalıştır"):
-        np.random.seed(42)
-        gunler = np.arange(gun_sayisi)
-        simulasyonlar = []
-        
-        for _ in range(10): # 10 farklı senaryo çizgi
-            getiriler = np.random.normal(0.0005, 0.015, gun_sayisi)
-            fiyatlar = baslangic_fiyat * np.cumprod(1 + getiriler)
-            simulasyonlar.append(fiyatlar)
-            
-        sim_df = pd.DataFrame(simulasyonlar).T
-        st.line_chart(sim_df)
-        st.caption("Grafik, piyasa dalgalanmalarına bağlı olası 10 farklı vade senaryo yolunu gösterir.")
-
-# ==========================================
-# 7. KİŞİSEL BÜTÇE & GİDER YÖNETİMİ
-# ==========================================
-elif modur == "💰 Kişisel Bütçe & Gider Yönetimi":
-    st.title("💰 Kişisel Finans & Bütçe Planlayıcı")
-    gelir = st.number_input("Aylık Net Geliriniz (TL):", 30000)
-    kira = st.number_input("Kira / Konut Gideri:", 10000)
-    mutfak = st.number_input("Mutfak & Yaşam Gideri:", 7000)
-    diger = st.number_input("Diğer Harcamalar:", 5000)
-    
-    toplam_gider = kira + mutfak + diger
-    kalan_tasarruf = gelir - toplam_gider
-    
-    col1, col2 = st.columns(2)
-    col1.metric("Toplam Aylık Gider", f"{toplam_gider:,.2f} TL")
-    col2.metric("Net Kalan / Tasarruf", f"{kalan_tasarruf:,.2f} TL", f"%{(kalan_tasarruf/gelir)*100:.1f} Oran")
-    
-    if kalan_tasarruf > 0:
-        st.success("Tebrikler! Bütçeniz pozitif tasarruf dengesinde ilerliyor.")
-    else:
-        st.error("Dikkat: Giderleriniz gelirinizin üzerine çıkmış durumda!")
+aktif_hisse = st.sidebar.text_input("Ana Varlık / Hisse Kodu", "THYAO.IS").upper()
+zaman_dilimi = st.sidebar.selectbox("Veri Periyodu", ["1 Ay", "3 Ay", "6 Ay", "1 Yıl"], index=3)
 
 st.sidebar.markdown("---")
-st.sidebar.write("ERMADEFİAN v3.0 | Profesyonel Sürüm")
+st.sidebar.subheader("🛠️ Hızlı Araçlar")
+kredi_hesapla = st.sidebar.checkbox("Kredi & Taksit Simülatörü Aç")
+portfoy_ac = st.sidebar.checkbox("Risk & Varlık Dağılımı Aç")
+
+# --- 5. ANA EKRAN: TEK SAYFA PROFESYONEL DÜZEN ---
+st.title("📊 ERMADEFİAN Canlı Finans & Piyasa Ekosistemi")
+st.caption(f"Son Güncelleme: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} | Mod: Kurumsal Terminal")
+
+# --- BÖLÜM A: CANLI KÜRESEL PİYASA BANTI ---
+st.subheader("🌐 Küresel Piyasalar & Emtia Ticker Bandı")
+canli_varliklar = {
+    "BIST 100": "XU100.IS", "S&P 500": "^GSPC", "Dolar/TL": "USDTRY=X", 
+    "Euro/TL": "EURTRY=X", "Altın (Ons)": "GC=F", "Bitcoin": "BTC-USD"
+}
+
+cols = st.columns(len(canli_varliklar))
+i = 0
+for isim, sembol in canli_varliklar.items():
+    try:
+        t_data = yf.Ticker(sembol).history(period="2d")
+        fiyat = float(t_data['Close'].iloc[-1])
+        onceki = float(t_data['Close'].iloc[-2])
+        fark = ((fiyat - onceki) / onceki) * 100
+        cols[i].metric(isim, f"{fiyat:,.2f}", f"{fark:+.2f}%")
+    except:
+        cols[i].metric(isim, "Veri Akışı Yok", "0.00%")
+    i += 1
+
+st.markdown("---")
+
+# --- BÖLÜM B: GELİŞMİŞ GRAFİK VE TEKNİK ANALİZ İSTASYONU ---
+st.subheader(f"📈 Derinlemesine Teknik Analiz: {aktif_hisse}")
+
+df = veri_cek_ve_hesapla(aktif_hisse)
+
+if df is not None and not df.empty:
+    son_fiyat = float(df['Close'].iloc[-1])
+    onceki_fiyat = float(df['Close'].iloc[-2])
+    gunluk_fark = ((son_fiyat - onceki_fiyat) / onceki_fiyat) * 100
+    rsi_deger = float(df['RSI'].iloc[-1])
+    
+    mc1, mc2, mc3, mc4 = st.columns(4)
+    mc1.metric("Kapanış Fiyatı", f"{son_fiyat:,.2f}", f"{gunluk_fark:+.2f}%")
+    mc2.metric("RSI (14 Güç Endeksi)", f"{rsi_deger:.2f}")
+    mc3.metric("20 Günlük Ortalama (SMA)", f"{float(df['SMA20'].iloc[-1]):,.2f}")
+    mc4.metric("İşlem Hacmi", f"{float(df['Volume'].iloc[-1]):,.0f}")
+    
+    # Profesyonel Plotly Candlestick Grafiği (Karanlık Tema Uyumlu)
+    fig = go.Figure()
+    fig.add_trace(go.Candlestick(
+        x=df.index,
+        open=df['Open'].squeeze(),
+        high=df['High'].squeeze(),
+        low=df['Low'].squeeze(),
+        close=df['Close'].squeeze(),
+        name='Mum Grafiği'
+    ))
+    fig.add_trace(go.Scatter(x=df.index, y=df['SMA20'].squeeze(), name='SMA 20', line=dict(color='#ff7f0e', width=1.5)))
+    fig.add_trace(go.Scatter(x=df.index, y=df['SMA50'].squeeze(), name='SMA 50', line=dict(color='#1f77b4', width=1.5)))
+    
+    fig.update_layout(
+        template="plotly_dark",
+        margin=dict(l=10, r=10, t=10, b=10),
+        height=500,
+        xaxis_rangeslider_visible=False
+    )
+    st.plotly_chart(fig, use_container_width=True)
+else:
+    st.error(f"'{aktif_hisse'}' sembolü için veri alınamadı. Lütfen geçerli bir borsa kodu girdiğinizden emin olun (Örn: THYAO.IS, GARAN.IS, AAPL).")
+
+st.markdown("---")
+
+# --- BÖLÜM C: İLERİ DÜZEY HESAPLAMA VE RİSK MODÜLLERİ ---
+if kredi_hesapla:
+    st.subheader("🧮 Profesyonel Kredi & Finansal Maliyet Analizörü")
+    kc1, kc2, kc3 = st.columns(3)
+    k_tutar = kc1.number_input("Kredi Anapara (TL)", 100000, 10000000, 500000, step=50000)
+    k_faiz = kc2.number_input("Aylık Faiz Oranı (%)", 0.1, 10.0, 3.5, step=0.1)
+    k_vade = kc3.slider("Vade (Ay)", 3, 120, 36)
+    
+    oran = k_faiz / 100
+    taksit = (k_tutar * oran * ((1 + oran)**k_vade)) / (((1 + oran)**k_vade) - 1)
+    toplam_odeme = taksit * k_vade
+    
+    ko1, ko2 = st.columns(2)
+    ko1.metric("Aylık Taksit Tutarı", f"{taksit:,.2f} TL")
+    ko2.metric("Toplam Geri Ödeme", f"{toplam_odeme:,.2f} TL", f"Faiz Yükü: {toplam_odeme - k_tutar:,.2f} TL")
+    st.markdown("---")
+
+if portfoy_ac:
+    st.subheader("🛡️ Algoritmik Varlık Dağılımı ve Risk Simülasyonu")
+    p1, p2, p3 = st.columns(3)
+    hisse_w = p1.slider("Hisse Senedi Ağırlığı (%)", 0, 100, 50)
+    altin_w = p2.slider("Emtia / Altın Ağırlığı (%)", 0, 100, 30)
+    nakit_w = p3.slider("Nakit / Likit Ağırlığı (%)", 0, 100, 20)
+    
+    if hisse_w + altin_w + nakit_w == 100:
+        pie_fig = px.pie(
+            names=['Hisse Senetleri', 'Altın / Emtia', 'Nakit / Likit'],
+            values=[hisse_w, altin_w, nakit_w],
+            template="plotly_dark",
+            title="Portföy Dağılım Matrisi"
+        )
+        st.plotly_chart(pie_fig, use_container_width=True)
+    else:
+        st.warning("⚠️ Varlık dağılım oranlarının toplamı tam olarak %100 olmalıdır.")
+
+# --- BÖLÜM D: VERİ TABLOSU VE DIŞA AKTARIM ---
+with st.expander("📂 Ham Piyasa Verileri ve İstatistik Tablosu"):
+    if df is not None and not df.empty:
+        st.dataframe(df.tail(30), use_container_width=True)
+    else:
+        st.info("Görüntülenecek veri bulunmuyor.")
+
+st.markdown("---")
+st.markdown("<p style='text-align: center; color: #8b949e;'>ERMADEFİAN Kurumsal Finans Terminali © 2026 | Kesintisiz Yerel İşlem ve Veri Güvenliği</p>", unsafe_allow_html=True)
